@@ -116,9 +116,9 @@
   (callback 
    (lambda (button event)
      ;;(send run-checkbox get-value)
-      (cond ((thread-running? (animate))
-             (thread-suspend (animate)))
-      (else ((thread-resume (animate)))))
+      (cond ((thread-running? animate)
+             (thread-suspend animate))
+      (else (thread-resume animate)))
       ))))
 
 (define reset-button
