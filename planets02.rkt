@@ -18,6 +18,9 @@
 (define (v-dot v w) (let ((vw (vector-map * v w))) (+ (x vw) (y vw))))
 (define (v-mag v) (sqrt (v-dot v v)))
 
+;; vector of threads
+(define threads (vector))
+
 ;; Planet object
 (define planet%
   (class object%
@@ -152,12 +155,12 @@
        (min-width 640)
        (min-height 480)))
 
-;; Busy loop planet animator
-(let loop ()
-  (sleep/yield .1)
-  (when (send run-checkbox get-value)
-    (send planet-container calculate-force)
-    (send planet-container move)
-    (send canvas refresh)
-    )
-  (loop))
+;; Busy loop planet animator thread
+(define animate
+  (thread
+   (let loop ()
+     (sleep .1)
+       (send planet-container calculate-force)
+       (send planet-container move)
+       (send canvas refresh)
+  (loop))))
