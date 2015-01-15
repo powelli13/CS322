@@ -88,15 +88,6 @@
                                (send planet calculate-force planets)
                                (send planet move)
                              (loop)))) threads)))
-    ;;(set! threads (cons ))) TODO make planets threads
-    ;;(define (calculate-force)
-    ;;  (for-each (lambda (planet)
-    ;;              (send planet calculate-force planets))
-    ;;            planets))
-    ;;(define (move)
-    ;;  (for-each (lambda (planet)
-    ;;              (send planet move))
-    ;;            planets))
     (define (draw dc)
       (for-each (lambda (planet)
                   (send planet draw dc))
@@ -128,10 +119,12 @@
        (label "Run animation")
   (callback
    (lambda (b e)
-     (cond ((thread-running? (list-ref threads 0))
+     (cond ((thread-running? animate)
+            (thread-suspend animate)
             (for-each (lambda (t) 
              (thread-suspend t)) threads))
-     (else (for-each (lambda (t)
+     (else (thread-resume animate)
+           (for-each (lambda (t)
               (thread-resume t)) threads)))))))
 
 (define reset-button
@@ -140,7 +133,10 @@
        (label "Reset")
        (callback
         (lambda (b e)
-          (send planet-container reset)))))
+          (send planet-container reset)
+          (for-each (lambda (t)
+                      (kill-thread t)) threads)
+          (set! threads '())))))
 
 (define kill-button
   (new button%
@@ -149,8 +145,7 @@
        (callback
         (lambda (b e)
           (for-each (lambda (t)
-                      (kill-thread t))
-                    threads)
+            (kill-thread t)) threads)
           (exit)))))
 
 (define my-canvas%
@@ -188,10 +183,8 @@
   (thread
    (lambda ()
      (let loop ()
-       (sleep .2)
-         ;;(send planet-container calculate-force)
-         ;;(send planet-container move)
+       (sleep .1)
          (send canvas refresh)
   (loop)))))
 
-(set! threads (cons animate threads))
+;;(set! threads (cons animate threads))
