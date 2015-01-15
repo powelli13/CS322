@@ -74,21 +74,29 @@
 ;; Abstract the list-handling for a list of planets
 (define planet-container%
   (class object%
-    (public add-planet calculate-force move draw get-planets reset)
+    ;;(public add-planet calculate-force move draw get-planets reset)
+    (public add-planet draw get-planets reset)
     (init-field (planets '()))
     (define (get-planets) planets)
     (define (reset) (set! planets '()))
     (define (add-planet planet)
-      (set! planets (cons planet planets)))
-      ;;(set! threads (cons ))) TODO make planets threads
-    (define (calculate-force)
-      (for-each (lambda (planet)
-                  (send planet calculate-force planets))
-                planets))
-    (define (move)
-      (for-each (lambda (planet)
-                  (send planet move))
-                planets))
+      (set! planets (cons planet planets))
+      (set! threads (cons (thread 
+                           (lambda ()
+                             (let loop()
+                               (sleep 0.1)
+                               (send planet calculate-force planets)
+                               (send planet move)
+                             (loop)))) threads)))
+    ;;(set! threads (cons ))) TODO make planets threads
+    ;;(define (calculate-force)
+    ;;  (for-each (lambda (planet)
+    ;;              (send planet calculate-force planets))
+    ;;            planets))
+    ;;(define (move)
+    ;;  (for-each (lambda (planet)
+    ;;              (send planet move))
+    ;;            planets))
     (define (draw dc)
       (for-each (lambda (planet)
                   (send planet draw dc))
@@ -124,8 +132,8 @@
             (for-each (lambda (t) 
              (thread-suspend t)) threads))
      (else (for-each (lambda (t)
-              (thread-resume t)) threads))))))
-       )
+              (thread-resume t)) threads)))))))
+
 (define reset-button
   (new button%
        (parent h-panel)
@@ -133,6 +141,17 @@
        (callback
         (lambda (b e)
           (send planet-container reset)))))
+
+(define kill-button
+  (new button%
+       (parent h-panel)
+       (label "End")
+       (callback
+        (lambda (b e)
+          (for-each (lambda (t)
+                      (kill-thread t))
+                    threads)
+          (exit)))))
 
 (define my-canvas%
   (class canvas%
@@ -169,9 +188,9 @@
   (thread
    (lambda ()
      (let loop ()
-       (sleep .1)
-         (send planet-container calculate-force)
-         (send planet-container move)
+       (sleep .2)
+         ;;(send planet-container calculate-force)
+         ;;(send planet-container move)
          (send canvas refresh)
   (loop)))))
 
