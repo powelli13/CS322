@@ -19,7 +19,8 @@
 (define (v-mag v) (sqrt (v-dot v v)))
 
 ;; vector of threads
-(define threads (vector))
+(define threads (list))
+
 
 ;; Planet object
 (define planet%
@@ -79,6 +80,7 @@
     (define (reset) (set! planets '()))
     (define (add-planet planet)
       (set! planets (cons planet planets)))
+      ;;(set! threads (cons ))) TODO make planets threads
     (define (calculate-force)
       (for-each (lambda (planet)
                   (send planet calculate-force planets))
@@ -116,7 +118,14 @@
   (new check-box%
        (parent h-panel)
        (label "Run animation")
-       ))
+  (callback
+   (lambda (b e)
+     (cond ((thread-running? (list-ref threads 0))
+            (for-each (lambda (t) 
+             (thread-suspend t)) threads))
+     (else (for-each (lambda (t)
+              (thread-resume t)) threads))))))
+       )
 (define reset-button
   (new button%
        (parent h-panel)
@@ -158,9 +167,12 @@
 ;; Busy loop planet animator thread
 (define animate
   (thread
-   (let loop ()
-     (sleep .1)
-       (send planet-container calculate-force)
-       (send planet-container move)
-       (send canvas refresh)
-  (loop))))
+   (lambda ()
+     (let loop ()
+       (sleep .1)
+         (send planet-container calculate-force)
+         (send planet-container move)
+         (send canvas refresh)
+  (loop)))))
+
+(set! threads (cons animate threads))
