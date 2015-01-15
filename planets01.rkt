@@ -115,7 +115,6 @@
        (label "Run animation")
   (callback 
    (lambda (button event)
-     ;;(send run-checkbox get-value)
       (cond ((thread-running? animate)
              (thread-suspend animate))
       (else (thread-resume animate)))
@@ -128,6 +127,15 @@
        (callback
         (lambda (b e)
           (send planet-container reset)))))
+
+(define kill-button
+  (new button%
+       (parent h-panel)
+       (label "End")
+       (callback
+        (lambda (b e)
+          (kill-thread animate)
+          (exit)))))
 
 (define my-canvas%
   (class canvas%
