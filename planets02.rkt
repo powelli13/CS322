@@ -146,6 +146,7 @@
         (lambda (b e)
           (for-each (lambda (t)
             (kill-thread t)) threads)
+          (kill-thread animate)
           (exit)))))
 
 (define my-canvas%
