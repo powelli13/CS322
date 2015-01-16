@@ -67,6 +67,36 @@
     ;; Don't forget the super-new!
     (super-new)
     ))
+
+;; loop planet animator thread
+(define animate
+  (thread
+   (lambda ()
+     (let loop ()
+       (sleep .1)
+         (send planet-container calculate-force)
+         (send planet-container move)
+         (send canvas refresh)
+  (loop)))))
+
+;; class to control run-check button
+(define rc-status%
+  (class object%
+    (public s get-s chg-s!)
+    (init-field (state #t))
+    (define (s) state)
+    (define (get-s) state)
+    (define (chg-s!)
+      (cond ((and state)
+             (set! state #f)
+             (thread-suspend animate))
+      (else (set! state #t)
+            (thread-resume animate))))
+    (define (first-state)
+      (thread-suspend animate))
+    (super-new)))
+(define rc-status (new rc-status%))
+
 ;; Abstract the list-handling for a list of planets
 (define planet-container%
   (class object%
@@ -88,6 +118,7 @@
       (for-each (lambda (planet)
                   (send planet draw dc))
                 planets))
+    (send rc-status chg-s!)
     (super-new)
     )
   )
@@ -117,21 +148,6 @@
        (style '(border))
        (border 2)))
 
-(define rc-status%
-  (class object%
-    (public s get-s chg-s!)
-    (init-field (state #f))
-    (define (s) state)
-    (define (get-s) state)
-    (define (chg-s!)
-      (cond ((and state)
-             (set! state #f))
-      (else (set! state #t))))
-    (define (first-state)
-      (thread-suspend animate))
-    (super-new)))
-(define rc-status (new rc-status%))
-
 (define run-checkbox
   (new check-box%
        (parent h-panel)
@@ -154,7 +170,6 @@
 (define my-canvas%
   (class canvas%
     (override on-paint on-event)
-    
     (define (on-paint)
       (let ((dc (send this get-dc))
             (w (send this get-width))
@@ -180,26 +195,3 @@
        (style '(border))
        (min-width 640)
        (min-height 480)))
-
-;; handle mouse clicking
-;;(define on-event
-;;  (lambda (event)
-;;    (when (send run-checkbox get-value)
-;;      (let () (cond ((thread-running? (animate))
-;;                  (thread-suspend (animate)))
-;;           (else ((thread-resume (animate))))))
-;;      )))
-
-;;(when (send run-checkbox get-value))
-
-;; Busy loop planet animator
-;; made changes trying to make this a thread
-(define animate
-  (thread
-   (lambda ()
-     (let loop ()
-       (sleep .1)
-         (send planet-container calculate-force)
-         (send planet-container move)
-         (send canvas refresh)
-  (loop)))))
