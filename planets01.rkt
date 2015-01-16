@@ -94,7 +94,13 @@
 (define planet-container (new planet-container%))
     
 ;; The GUI
-(define frame (new frame% 
+(define my-frame%
+  (class frame%
+    (define (on-close)
+      (kill-thread animate))
+    (augment on-close)
+    (super-new)))
+(define frame (new my-frame% 
                    (label "Planets")
                    (min-width 120)
                    (min-height 80)
@@ -109,16 +115,31 @@
        (style '(border))
        (border 2)))
 
+(define rc-status%
+  (class object%
+    (public s get-s chg-s!)
+    (init-field (state #f))
+    (define (s) state)
+    (define (get-s) state)
+    (define (chg-s!)
+      (cond ((and state)
+             (set! state #f))
+      (else (set! state #t))))
+    (define (first-state)
+      (thread-suspend animate))
+    (super-new)))
+(define rc-status (new rc-status%))
+
 (define run-checkbox
   (new check-box%
        (parent h-panel)
        (label "Run animation")
-  (callback 
-   (lambda (button event)
-      (cond ((thread-running? animate)
-             (thread-suspend animate))
-      (else (thread-resume animate)))
-      ))))
+       (callback
+        (lambda (button event)
+          (send rc-status chg-s!)
+          (cond ((thread-running? animate)
+            (thread-suspend animate))
+          (else (thread-resume animate)))))))
 
 (define reset-button
   (new button%
