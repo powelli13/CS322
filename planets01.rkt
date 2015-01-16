@@ -80,6 +80,7 @@
   (loop)))))
 
 ;; class to control run-check button
+;; and status of thread
 (define rc-status%
   (class object%
     (public s get-s chg-s!)
@@ -89,9 +90,11 @@
     (define (chg-s!)
       (cond ((and state)
              (set! state #f)
-             (thread-suspend animate))
+             (thread-suspend animate)
+             )
       (else (set! state #t)
-            (thread-resume animate))))
+            (thread-resume animate)
+            )))
     (define (first-state)
       (thread-suspend animate))
     (super-new)))
@@ -155,9 +158,10 @@
        (callback
         (lambda (button event)
           (send rc-status chg-s!)
-          (cond ((thread-running? animate)
-            (thread-suspend animate))
-          (else (thread-resume animate)))))))
+          ;;(cond ((thread-running? animate)
+          ;;  (thread-suspend animate))
+          ;;(else (thread-resume animate)))
+          ))))
 
 (define reset-button
   (new button%
