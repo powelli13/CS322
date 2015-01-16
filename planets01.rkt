@@ -94,12 +94,14 @@
 (define planet-container (new planet-container%))
     
 ;; The GUI
+;; kill animate thread on close
 (define my-frame%
   (class frame%
     (define (on-close)
       (kill-thread animate))
     (augment on-close)
     (super-new)))
+
 (define frame (new my-frame% 
                    (label "Planets")
                    (min-width 120)
@@ -148,15 +150,6 @@
        (callback
         (lambda (b e)
           (send planet-container reset)))))
-
-(define kill-button
-  (new button%
-       (parent h-panel)
-       (label "End")
-       (callback
-        (lambda (b e)
-          (kill-thread animate)
-          (exit)))))
 
 (define my-canvas%
   (class canvas%
