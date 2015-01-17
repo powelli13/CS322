@@ -83,10 +83,9 @@
 ;; and status of thread
 (define rc-status%
   (class object%
-    (public s get-s chg-s!)
+    (public s chg-s!)
     (init-field (state #t))
     (define (s) state)
-    (define (get-s) state)
     (define (chg-s!)
       (cond ((and state)
              (set! state #f)

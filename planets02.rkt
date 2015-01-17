@@ -18,7 +18,7 @@
 (define (v-dot v w) (let ((vw (vector-map * v w))) (+ (x vw) (y vw))))
 (define (v-mag v) (sqrt (v-dot v v)))
 
-;; vector of threads
+;; list of planet threads
 (define threads (list))
 
 
@@ -122,7 +122,10 @@
                                (send planet calculate-force planets)
                                (send planet move)
                              (loop)))) threads))
+      (cond ((not (and (send rc-status s)))
+             (thread-suspend (car threads)))
       )
+    )
     (define (draw dc)
       (for-each (lambda (planet)
                   (send planet draw dc))
