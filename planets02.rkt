@@ -71,6 +71,40 @@
     ;; Don't forget the super-new!
     (super-new)
     ))
+
+;; loop for planet animator thread
+(define animate
+  (thread
+   (lambda ()
+     (let loop ()
+       (sleep .1)
+         (send canvas refresh)
+  (loop)))))
+
+;; class to control run-check button and threads
+(define rc-status%
+  (class object%
+    (public s chg-s!)
+    (init-field (state #t))
+    (define (s) state)
+    (define (chg-s!)
+      (cond ((and state)
+             ;; suspend threads
+             (set! state #f)
+             (thread-suspend animate)
+             (for-each (lambda (t)
+               (thread-suspend t)) threads)
+             )
+            (else
+             ;; resume threads
+             (set! state #t)
+             (thread-resume animate)
+             (for-each (lambda (t)
+               (thread-resume t)) threads)
+                  )))
+    (super-new)))
+(define rc-status (new rc-status%))
+
 ;; Abstract the list-handling for a list of planets
 (define planet-container%
   (class object%
@@ -87,11 +121,13 @@
                                (sleep 0.1)
                                (send planet calculate-force planets)
                                (send planet move)
-                             (loop)))) threads)))
+                             (loop)))) threads))
+      )
     (define (draw dc)
       (for-each (lambda (planet)
                   (send planet draw dc))
                 planets))
+    (send rc-status chg-s!)
     (super-new)
     )
   )
@@ -109,7 +145,7 @@
     (augment on-close)
     (super-new)))
 
-(define frame (new my-frame% 
+(define frame (new my-frame%
                    (label "Planets")
                    (min-width 120)
                    (min-height 80)
@@ -130,13 +166,15 @@
        (label "Run animation")
   (callback
    (lambda (b e)
-     (cond ((thread-running? animate)
-            (thread-suspend animate)
-            (for-each (lambda (t) 
-             (thread-suspend t)) threads))
-     (else (thread-resume animate)
-           (for-each (lambda (t)
-              (thread-resume t)) threads)))))))
+     (send rc-status chg-s!)
+     ;;(cond ((thread-running? animate)
+     ;;       (thread-suspend animate)
+     ;;       (for-each (lambda (t) 
+     ;;        (thread-suspend t)) threads))
+     ;;(else (thread-resume animate)
+     ;;      (for-each (lambda (t)
+     ;;         (thread-resume t)) threads)))
+     ))))
 
 (define reset-button
   (new button%
@@ -178,12 +216,3 @@
        (style '(border))
        (min-width 640)
        (min-height 480)))
-
-;; loop for planet animator thread
-(define animate
-  (thread
-   (lambda ()
-     (let loop ()
-       (sleep .1)
-         (send canvas refresh)
-  (loop)))))

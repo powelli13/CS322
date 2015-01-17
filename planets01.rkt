@@ -95,8 +95,6 @@
       (else (set! state #t)
             (thread-resume animate)
             )))
-    (define (first-state)
-      (thread-suspend animate))
     (super-new)))
 (define rc-status (new rc-status%))
 
@@ -157,11 +155,7 @@
        (label "Run animation")
        (callback
         (lambda (button event)
-          (send rc-status chg-s!)
-          ;;(cond ((thread-running? animate)
-          ;;  (thread-suspend animate))
-          ;;(else (thread-resume animate)))
-          ))))
+          (send rc-status chg-s!)))))
 
 (define reset-button
   (new button%
