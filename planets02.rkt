@@ -98,7 +98,18 @@
 (define planet-container (new planet-container%))
     
 ;; The GUI
-(define frame (new frame% 
+;; augmented to kill thread on close
+(define my-frame%
+  (class frame%
+    (define (on-close)
+      (lambda (b e)
+          (for-each (lambda (t)
+            (kill-thread t)) threads)
+          (kill-thread animate)))
+    (augment on-close)
+    (super-new)))
+
+(define frame (new my-frame% 
                    (label "Planets")
                    (min-width 120)
                    (min-height 80)
@@ -138,17 +149,6 @@
                       (kill-thread t)) threads)
           (set! threads '())))))
 
-(define kill-button
-  (new button%
-       (parent h-panel)
-       (label "End")
-       (callback
-        (lambda (b e)
-          (for-each (lambda (t)
-            (kill-thread t)) threads)
-          (kill-thread animate)
-          (exit)))))
-
 (define my-canvas%
   (class canvas%
     (override on-paint on-event)
@@ -179,7 +179,7 @@
        (min-width 640)
        (min-height 480)))
 
-;; Busy loop planet animator thread
+;; loop for planet animator thread
 (define animate
   (thread
    (lambda ()
@@ -187,5 +187,3 @@
        (sleep .1)
          (send canvas refresh)
   (loop)))))
-
-;;(set! threads (cons animate threads))
