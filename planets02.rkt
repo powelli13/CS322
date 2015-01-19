@@ -122,8 +122,11 @@
                                (send planet calculate-force planets)
                                (send planet move)
                              (loop)))) threads))
+      ;; suspend the newly added thread if its not running animation
       (cond ((not (and (send rc-status s)))
-             (thread-suspend (car threads)))
+             (thread-suspend (car threads))
+             (for-each (lambda (t)
+               (thread-suspend t)) threads))
       )
     )
     (define (draw dc)
