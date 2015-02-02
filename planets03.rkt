@@ -148,7 +148,7 @@
                                      (semaphore-post turnstile2))
                                (semaphore-post mutex)
                                (semaphore-wait turnstile2)
-                               (semaphore-post turnstile1)
+                               (semaphore-post turnstile2)
                              (loop)))) threads))
       ;; suspend the newly added thread if its not running animation
       (cond ((not (and (send rc-status s)))
