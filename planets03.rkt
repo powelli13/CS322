@@ -110,7 +110,7 @@
 (define mutex (make-semaphore 1))
 (define turnstile1 (make-semaphore 0))
 (define turnstile2 (make-semaphore 1))
-(define cnt 0)
+(define count 0)
 
 ;; Abstract the list-handling for a list of planets
 (define planet-container%
@@ -131,8 +131,8 @@
                                (send planet calculate-force planets)
                                ;; first turnstile
                                (semaphore-wait mutex)
-                                 (set! cnt (+ cnt 1))
-                                 (cond (= cnt (length threads)) 
+                                 (set! count (+ count 1))
+                                 (cond (= count (length threads)) 
                                        (semaphore-wait turnstile2)
                                        (semaphore-post turnstile1))
                                (semaphore-post mutex)
@@ -142,8 +142,8 @@
                                (send planet move)
                                ;; second turnstile
                                (semaphore-wait mutex)
-                               (set! cnt (- cnt 1))
-                               (cond (= cnt 0)
+                               (set! count (- count 1))
+                               (cond (= count 0)
                                      (semaphore-wait turnstile1)
                                      (semaphore-post turnstile2))
                                (semaphore-post mutex)
@@ -210,7 +210,7 @@
        (callback
         (lambda (b e)
           (send planet-container reset)
-          (set! cnt 0)
+          (set! count 0)
           (for-each (lambda (t)
                       (kill-thread t)) threads)
           (set! threads '())))))
