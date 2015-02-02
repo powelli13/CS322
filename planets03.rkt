@@ -7,6 +7,7 @@
 
 (require racket/gui)
 
+
 ;; Small 2d vector library for the Newtonian physics
 (define (x v) (vector-ref v 0))
 (define (y v) (vector-ref v 1))
@@ -21,7 +22,6 @@
 
 ;; list of planet threads
 (define threads (list))
-
 
 ;; Planet object
 (define planet%
@@ -106,6 +106,12 @@
     (super-new)))
 (define rc-status (new rc-status%))
 
+;; semaphores to implement turnstile on planet updates TODO
+(define mutex (make-semaphore 1))
+(define turnstile1 (make-semaphore 0))
+(define turnstile2 (make-semaphore 1))
+(define cnt 0)
+
 ;; Abstract the list-handling for a list of planets
 (define planet-container%
   (class object%
@@ -116,12 +122,33 @@
     (define (reset) (set! planets '()))
     (define (add-planet planet)
       (set! planets (cons planet planets))
+      ;; here is where the turnstile is implemented
       (set! threads (cons (thread 
                            (lambda ()
                              (let loop()
+                               ;; first rendevouz
                                (sleep 0.1)
                                (send planet calculate-force planets)
+                               ;; first turnstile
+                               (semaphore-wait mutex)
+                                 (set! cnt (+ cnt 1))
+                                 (cond (= cnt (length threads)) 
+                                       (semaphore-wait turnstile2)
+                                       (semaphore-post turnstile1))
+                               (semaphore-post mutex)
+                               (semaphore-wait turnstile1)
+                               (semaphore-post turnstile1)
+                               ;; critical point
                                (send planet move)
+                               ;; second turnstile
+                               (semaphore-wait mutex)
+                               (set! cnt (- cnt 1))
+                               (cond (= cnt 0)
+                                     (semaphore-wait turnstile1)
+                                     (semaphore-post turnstile2))
+                               (semaphore-post mutex)
+                               (semaphore-wait turnstile2)
+                               (semaphore-post turnstile1)
                              (loop)))) threads))
       ;; suspend the newly added thread if its not running animation
       (cond ((not (and (send rc-status s)))
@@ -174,13 +201,6 @@
   (callback
    (lambda (b e)
      (send rc-status chg-s!)
-     ;;(cond ((thread-running? animate)
-     ;;       (thread-suspend animate)
-     ;;       (for-each (lambda (t) 
-     ;;        (thread-suspend t)) threads))
-     ;;(else (thread-resume animate)
-     ;;      (for-each (lambda (t)
-     ;;         (thread-resume t)) threads)))
      ))))
 
 (define reset-button
@@ -190,6 +210,7 @@
        (callback
         (lambda (b e)
           (send planet-container reset)
+          (set! cnt 0)
           (for-each (lambda (t)
                       (kill-thread t)) threads)
           (set! threads '())))))
