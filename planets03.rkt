@@ -151,7 +151,7 @@
                                (semaphore-post turnstile2)
                              (loop)))) threads))
       ;; suspend the newly added thread if its not running animation
-      (cond ((not (and (send rc-status s)))
+      (cond ((not (send rc-status s))
              (thread-suspend (car threads))
              (for-each (lambda (t)
                (thread-suspend t)) threads))
