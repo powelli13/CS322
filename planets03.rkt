@@ -132,9 +132,15 @@
                                ;; first turnstile
                                (semaphore-wait mutex)
                                  (set! cnt (+ cnt 1))
-                                 (cond (= cnt (length threads)) 
+                               
+                                 (displayln "length of threads:")
+                                 (displayln (length threads))
+                                 (displayln "count:")
+                                 (displayln cnt)
+                               
+                                 (cond ((= cnt (length threads)) 
                                        (semaphore-wait turnstile2)
-                                       (semaphore-post turnstile1))
+                                       (semaphore-post turnstile1)))
                                (semaphore-post mutex)
                                (semaphore-wait turnstile1)
                                (semaphore-post turnstile1)
@@ -143,9 +149,9 @@
                                ;; second turnstile
                                (semaphore-wait mutex)
                                (set! cnt (- cnt 1))
-                               (cond (= cnt 0)
+                               (cond ((= cnt 0)
                                      (semaphore-wait turnstile1)
-                                     (semaphore-post turnstile2))
+                                     (semaphore-post turnstile2)))
                                (semaphore-post mutex)
                                (semaphore-wait turnstile2)
                                (semaphore-post turnstile2)
