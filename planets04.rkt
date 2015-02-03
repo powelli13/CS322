@@ -4,6 +4,10 @@
 ;; Edited by Isaac Powell for csci322
 ;; Homework #2
 ;; Each planet runs within a thread
+;; When the view is being refreshed the planets are not allowed to move
+;; this is accomplished using a no-starve reader writer solution
+;; this is listing 4.20 found in the little book of seamphores
+;; semaphores for a lightswitch were also used to implement this
 
 (require racket/gui)
 
@@ -73,13 +77,30 @@
     (super-new)
     ))
 
+;; semaphores to implement turnstile on planet updates
+(define ts-mutex (make-semaphore 1))
+(define turnstile1 (make-semaphore 0))
+(define turnstile2 (make-semaphore 1))
+(define cnt 0)
+;; lightswitch variables
+(define ls-cnt 0)
+(define ls-mutex (make-semaphore 1))
+(define ls-sem (make-semaphore 1))
+;; semaphores to ensure that animate only runs during planet move update
+(define anim-empty (make-semaphore 1))
+(define anim-ts (make-semaphore 1))
+
 ;; loop for planet animator thread
 (define animate
   (thread
    (lambda ()
      (let loop ()
        (sleep .1)
+       (semaphore-wait anim-ts)
+        (semaphore-wait anim-empty)
          (send canvas refresh)
+       (semaphore-post anim-ts)
+       (semaphore-post anim-empty)
   (loop)))))
 
 ;; class to control run-check button and threads
@@ -106,16 +127,9 @@
     (super-new)))
 (define rc-status (new rc-status%))
 
-;; semaphores to implement turnstile on planet updates TODO
-(define mutex (make-semaphore 1))
-(define turnstile1 (make-semaphore 0))
-(define turnstile2 (make-semaphore 1))
-(define cnt 0)
-
 ;; Abstract the list-handling for a list of planets
 (define planet-container%
   (class object%
-    ;;(public add-planet calculate-force move draw get-planets reset)
     (public add-planet draw get-planets reset)
     (init-field (planets '()))
     (define (get-planets) planets)
@@ -130,29 +144,38 @@
                                (sleep 0.1)
                                (send planet calculate-force planets)
                                ;; first turnstile
-                               (semaphore-wait mutex)
+                               (semaphore-wait ts-mutex)
                                  (set! cnt (+ cnt 1))
-                               
-                                 (displayln "length of threads:")
-                                 (displayln (length threads))
-                                 (displayln "count:")
-                                 (displayln cnt)
-                               
                                  (cond ((= cnt (length threads)) 
                                        (semaphore-wait turnstile2)
                                        (semaphore-post turnstile1)))
-                               (semaphore-post mutex)
+                               (semaphore-post ts-mutex)
                                (semaphore-wait turnstile1)
                                (semaphore-post turnstile1)
+                               ;; turnstile to not overlap animate thread
+                               (semaphore-wait anim-ts)
+                               (semaphore-post anim-ts)
+                               ;; lock lightswitch
+                               (semaphore-wait ls-mutex)
+                                 (set! ls-cnt (+ ls-cnt 1))
+                                 (cond ((= ls-cnt 1)
+                                        (semaphore-wait anim-empty)))
+                               (semaphore-post ls-mutex)
                                ;; critical point
                                (send planet move)
+                               ;; unlock lightswitch
+                               (semaphore-wait ls-mutex)
+                                 (set! ls-cnt (- ls-cnt 1))
+                                 (cond ((= ls-cnt 0)
+                                        (semaphore-post anim-empty)))
+                               (semaphore-post ls-mutex)
                                ;; second turnstile
-                               (semaphore-wait mutex)
+                               (semaphore-wait ts-mutex)
                                (set! cnt (- cnt 1))
                                (cond ((= cnt 0)
                                      (semaphore-wait turnstile1)
                                      (semaphore-post turnstile2)))
-                               (semaphore-post mutex)
+                               (semaphore-post ts-mutex)
                                (semaphore-wait turnstile2)
                                (semaphore-post turnstile2)
                              (loop)))) threads))

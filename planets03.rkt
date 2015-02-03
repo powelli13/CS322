@@ -106,7 +106,7 @@
     (super-new)))
 (define rc-status (new rc-status%))
 
-;; semaphores to implement turnstile on planet updates TODO
+;; semaphores to implement turnstile on planet updates
 (define mutex (make-semaphore 1))
 (define turnstile1 (make-semaphore 0))
 (define turnstile2 (make-semaphore 1))
@@ -132,12 +132,6 @@
                                ;; first turnstile
                                (semaphore-wait mutex)
                                  (set! cnt (+ cnt 1))
-                               
-                                 (displayln "length of threads:")
-                                 (displayln (length threads))
-                                 (displayln "count:")
-                                 (displayln cnt)
-                               
                                  (cond ((= cnt (length threads)) 
                                        (semaphore-wait turnstile2)
                                        (semaphore-post turnstile1)))
