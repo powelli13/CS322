@@ -1,3 +1,5 @@
+# learned this at: http://www.tutorialspoint.com/python/python_multithreading.htm
+
 import threading
 import time
 
