@@ -8,8 +8,8 @@
 import threading
 import time, random
 
-# the baton, a mutex to make changing states atomic
-baton = threading.Semaphore(1)
+# a mutex to make changing states atomic
+mutex = threading.Semaphore(1)
 n = 5 # number of philosophers
 eating = [False for i in range(n)]
 waiting = [False for i in range(n)]
@@ -23,25 +23,25 @@ class Philosopher(threading.Thread):
         self.i = i # index of philosopher in larger array
         
     def get_forks(self):
-        baton.acquire()
+        mutex.acquire()
         waiting[self.i] = True
         check(self.i)
-        baton.release()
+        mutex.release()
         philSem[self.i].acquire()
         print "Philosopher "+str(self.i)+" is getting forks."
 
     def put_forks(self):
-        baton.acquire()
+        mutex.acquire()
         waiting[self.i] = False
         eating[self.i] = False
         check((self.i+1)%n)
         check((self.i-1)%n)
         print "Philosopher "+str(self.i)+" is releasing forks."
-        baton.release()
+        mutex.release()
         
     def eat(self):
         print "Philosopher "+str(self.i)+" is eating."
-        time.sleep(random.randint(3,7))
+        time.sleep(random.randint(3,8))
         
     def think(self):
         time.sleep(random.randint(3,8))
@@ -65,6 +65,7 @@ class Philosopher(threading.Thread):
 def check(i):
     if waiting[i] and not eating[(i+1)%n] and not eating[(i-1)%n]:
         eating[i] = True
+        waiting[i] = False
         philSem[i].release()
 
 def main():
@@ -76,7 +77,7 @@ def main():
     for i in range(0,n):
         Philosophers[i].start()
         
-    print "Main is done."
+    print "Main is done. Threads are running."
     
 if __name__ == "__main__":
     main()

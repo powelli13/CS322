@@ -5,17 +5,19 @@
 # of this is based of off his solution to the problem
 # as found in The Little Book of Semaphores
 
-import threading
+import threading, Queue
 import time, random
 
-# the baton, a mutex to make changing states atomic
-baton = threading.Semaphore(1)
+# a mutex to make changing states atomic
+mutex = threading.Semaphore(1)
 n = 5 # number of philosophers
+# boolean arrays to record states
 eating = [False for i in range(n)]
 waiting = [False for i in range(n)]
+# semaphores for a philosopher to wait on
 philSem = [threading.Semaphore(0) for i in range(n)]
 Philosophers = []
-
+pq = Queue.Queue()
 
 class Philosopher(threading.Thread):
     def __init__(self, i):
@@ -23,25 +25,33 @@ class Philosopher(threading.Thread):
         self.i = i # index of philosopher in larger array
         
     def get_forks(self):
-        baton.acquire()
+        mutex.acquire()
         waiting[self.i] = True
-        check(self.i)
-        baton.release()
+        pq.put(self.i)
+        if pq.qsize() > 0:
+            t = pq.get()
+            check(t)
+        mutex.release()
         philSem[self.i].acquire()
         print "Philosopher "+str(self.i)+" is getting forks."
 
     def put_forks(self):
-        baton.acquire()
+        mutex.acquire()
         waiting[self.i] = False
         eating[self.i] = False
-        check((self.i+1)%n)
-        check((self.i-1)%n)
+        if pq.qsize() > 0:
+            t = pq.get()
+            check(t)
+        else:
+            check((self.i+1)%n)
+            check((self.i-1)%n)
+            
         print "Philosopher "+str(self.i)+" is releasing forks."
-        baton.release()
+        mutex.release()
         
     def eat(self):
         print "Philosopher "+str(self.i)+" is eating."
-        time.sleep(random.randint(3,7))
+        time.sleep(random.randint(3,8))
         
     def think(self):
         time.sleep(random.randint(3,8))
@@ -66,7 +76,7 @@ def check(i):
     if waiting[i] and not eating[(i+1)%n] and not eating[(i-1)%n]:
         eating[i] = True
         philSem[i].release()
-
+            
 def main():
     # create threads
     for i in range(0,n):

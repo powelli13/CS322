@@ -6,12 +6,14 @@ February 19th 2015
 Part A:
 The course grained solution is primarily based around recording the states of the philosophers adjacent to you and basing your decision to either eat or wait for forks off of that information.  
 In order to keep track of whether a given philosopher is waiting or eating arrays of booleans are kept with n values where n is the number of philosophers. These arrays are checked by "hungry"
-philosophers before they grab forks or begin eating. Accuracy of checks is preserved by having a baton which acts as a mutex for checking the philosopher state arrays. It is distinct from a 
-regular mutex because it is not released until the next potential candidate for eating who is hungry is woken up. This idea of state based, rather than fork based, synchronization is aided largely
-by Tanenbaums solution to the problem, which can be found in the Little Book of Semaphors. 
+philosophers before they grab forks or begin eating. Accuracy of checks is preserved by having a mutex for checking the philosopher state arrays. The baton is a semaphore for each philosopher
+that a given semaphore waits on until they are checked and found to be able to eat. It is a baton in that whichever Philosopher finds another philosopher to be ready to eat then they pass the
+baton to them by signaling the semaphore in the array of philosopher semaphores. 
+This idea of state based, rather than fork based, synchronization is aided largely by Tanenbaums solution to the problem, which can be found in the Little Book of Semaphors. 
 The global invariant is that if any eating[i] is true then eating[(i+1) % n] is false. This invariant is enforced by an assert
 statement in the main loop after the thread is finished eating and before the thread releases the forks. 
 
 Part B:
 
+A Queue is used.
 
