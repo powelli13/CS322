@@ -1,8 +1,14 @@
+# Isaac Powell made for Geoffrey Matthew's csci322
+# implementation of a starving solution to the 
+# dining philosophers problem.
+# credit should be given to Tanenbaum as much
+# of this is based of off his solution to the problem
+# as found in The Little Book of Semaphores
+
 import threading
 import time, random
 
 # the baton, a mutex to make changing states atomic
-# TODO maybe need to make these global
 baton = threading.Semaphore(1)
 n = 5 # number of philosophers
 eating = [False for i in range(n)]
@@ -42,6 +48,7 @@ class Philosopher(threading.Thread):
             
     # main execution loop
     def run(self):
+        # philosophers only eat a select amount of times
         t = 5
         i = 0
         while i < t:
