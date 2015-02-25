@@ -4,19 +4,90 @@ CSCI 322, Homework 4 Write-up
 February 19th 2015
 
 Part A:
-The global invariant is that if any eating[i] is true then eating[(i+1) % n] is false. This invariant is enforced by an assert statement in the main loop after the thread is finished eating 
-and before the thread releases the forks. 
-The course grained solution is primarily based around recording the states of the philosophers adjacent to you and basing your decision to either eat or wait for forks off of that information.  
-In order to keep track of whether a given philosopher is waiting or eating arrays of booleans are kept with n values where n is the number of philosophers. These arrays are checked by "hungry"
-philosophers before they grab forks or begin eating. Accuracy of checks is preserved by having a mutex for checking the philosopher state arrays. The baton is a semaphore for each philosopher
-that a given semaphore waits on until they are checked and found to be able to eat. It is a baton in that whichever Philosopher finds another philosopher to be ready to eat then they pass the
-baton to them by signaling the semaphore in the array of philosopher semaphores. 
-This idea of state based, rather than fork based, synchronization is aided largely by Tanenbaums solution to the problem, which can be found in the Little Book of Semaphors. 
+The global invariant is that if any eating[i] is true then eating[(i+1) % n] is false. So no philosophers next to each other can eat at the same time. This invariant is enforced by an assert 
+statement in the main loop after the thread is finished eating and before the thread releases the forks. The course grained solution is primarily based around recording the states of the 
+philosophers adjacent to you and basing your decision to either eat or wait for forks off of that information. In order to keep track of whether a given philosopher is waiting or eating arrays 
+of booleans are kept with n values where n is the number of philosophers. These arrays are checked by "hungry" philosophers before they grab forks or begin eating. Accuracy of checks is preserved 
+by having a mutex for checking the philosopher state arrays. The baton is a semaphore for each philosopher that a given thread waits on until they are checked and found to be able to eat. 
+It is a baton in that whichever Philosopher finds another Philosopher to be ready to eat then they pass the baton to them by signaling the waiting philosopher's semaphore in the array of 
+philosopher semaphores. This idea of state based, rather than fork based, synchronization is aided largely by Tanenbaums solution to the problem, which can be found in the Little Book of Semaphors. 
+The variables used are boolean arrays for eating and waiting, as well as the semaphore array with one for each philosopher this array acts as the baton being passed, lastly there is the mutex for 
+atomic array references. A check function is used to see whether or not the philosophers neighbors are ready to eat, if they are then the baton is passed to them. The pseudo code is found below:
 
+# i is the index of the threads position in the philosopher array.
+get_forks():
+    mutex.P()
+    waiting[i]=True
+    check(i)
+    mutex.V()
+    # the philosopher waits to receive baton if they are not ready
+    philosopher_semaphores[i].P()
+    
+# n is the number of philosopher, modulo division used to wrap around
+put_forks():
+    mutex.P()
+    waiting[i]=False
+    eating[i]=False
+    check neighbors on left and right
+    mutex.V()
+
+# the index of who to be checked is specified, here the baton is passed to the philosopher ready to eat
+check(i):
+    if waiting[i] and neighbors of i not eating:
+        eating[i]=True
+        waiting[i]=False
+        philosopher_semaphores[i].V()
+
+# the main loop of a philosopher thread
+run():
+    loop:
+        think()
+        get_forks()
+        eat()
+        assert global invariant that your neightbor is not eating
+        put_forks()
 
 Part B:
 The solution to part A had problems with starvation because it would not ensure that a hungry and waiting philosopher would eat next. For example if Philosopher 0 wanted to eat when philosophers 
-4 and 2 are eating then philosoper 0 may starve becase 2 and 4 could simply check their neighbors handing the forks to 1 and 3. The Philosophers 1 and 3 could do the same and 0 would never eat. 
-A Queue is used to resolve this issue. Every time that a thread wants to pick up forks they add themself to the philosopher queue. Then whenever a philosopher is putting down forks they check the
-queue and if it as someone in it then they pass the baton to them.
-
+4 and 2 are eating then philosoper 0 may starve becase 2 and 4 could simply check their neighbors handing the forks to 1 and 3. The Philosophers 1 and 3 could do the same handing them back to 4 
+and 2 thus 0 would never eat. A Queue is used to resolve this issue. Every time that a thread wants to pick up forks they add themself to the philosopher queue. Then whenever a philosopher is 
+putting down forks they check the queue and if it as someone in it then they pass the baton to them, rather than checking their neighbors. Because every thread adds themselves to the queue it ensures
+that priority will eventually be given to them when it comes to checking eligibility to eat. The queue is FIFO so no thread will be able to "run past" other threads in the queue by adding themselves
+and handing the baton to themselves quickly and in succession. The consistancy of the queue is also guaranteed because it is only every accessed when a thread holds the mutex that is used to check
+the eating and waiting boolean arrays. This will further ensure that no thread will "run past" and continue to use the queue to eat while another thread starves. The global invariant remains the same
+for part B as it was for part A. Because this same global invariant is enforced and maintained in both part then no philosopher in the queue, when given forks and allowed to eat, will violate this
+invariant. The variables used are identical to part A the only difference is the addition of the Philosopher Queue and use of this queue at various ponints in the program. 
+Pseudo code for the non-starving solution is below:
+get_forks():
+    mutex.P()
+    waiting[i]=True
+    # add the index of the philosopher to the queue
+    philQueue.add(i)
+    if philQueue.size > 0:
+        run check on the head of the queue
+    mutex.V()
+    philosopher_semaphores[i].P()
+    
+put_forks():
+    mutex.P()
+    waiting[i]=False
+    eating[i]=False
+    if philQueue.size > 0:
+        run check on head of queue
+    else:
+        run check on both neighbors
+        
+check(i):
+    if waiting[i] and neighbors of i not eating:
+        eating[i]=True
+        # pass baton to let waiting philosopher eat.
+        philosopher_semaphores[i].V()
+    
+run():
+    loop:
+        think()
+        get_forks()
+        eat()
+        assert global invariant
+        put_forks()
+        
