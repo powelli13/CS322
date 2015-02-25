@@ -4,16 +4,19 @@ CSCI 322, Homework 4 Write-up
 February 19th 2015
 
 Part A:
+The global invariant is that if any eating[i] is true then eating[(i+1) % n] is false. This invariant is enforced by an assert statement in the main loop after the thread is finished eating 
+and before the thread releases the forks. 
 The course grained solution is primarily based around recording the states of the philosophers adjacent to you and basing your decision to either eat or wait for forks off of that information.  
 In order to keep track of whether a given philosopher is waiting or eating arrays of booleans are kept with n values where n is the number of philosophers. These arrays are checked by "hungry"
 philosophers before they grab forks or begin eating. Accuracy of checks is preserved by having a mutex for checking the philosopher state arrays. The baton is a semaphore for each philosopher
 that a given semaphore waits on until they are checked and found to be able to eat. It is a baton in that whichever Philosopher finds another philosopher to be ready to eat then they pass the
 baton to them by signaling the semaphore in the array of philosopher semaphores. 
 This idea of state based, rather than fork based, synchronization is aided largely by Tanenbaums solution to the problem, which can be found in the Little Book of Semaphors. 
-The global invariant is that if any eating[i] is true then eating[(i+1) % n] is false. This invariant is enforced by an assert
-statement in the main loop after the thread is finished eating and before the thread releases the forks. 
+
 
 Part B:
-
-A Queue is used.
+The solution to part A had problems with starvation because it would not ensure that a hungry and waiting philosopher would eat next. For example if Philosopher 0 wanted to eat when philosophers 
+4 and 2 are eating then philosoper 0 may starve becase 2 and 4 could simply check their neighbors handing the forks to 1 and 3. The Philosophers 1 and 3 could do the same and 0 would never eat. 
+A Queue is used to resolve this issue. Every time that a thread wants to pick up forks they add themself to the philosopher queue. Then whenever a philosopher is putting down forks they check the
+queue and if it as someone in it then they pass the baton to them.
 

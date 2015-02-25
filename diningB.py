@@ -86,7 +86,7 @@ def main():
     for i in range(0,n):
         Philosophers[i].start()
         
-    print "Main is done."
+    print "Main is done. Philosophers threads running."
     
 if __name__ == "__main__":
     main()
