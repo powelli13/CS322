@@ -1,0 +1,21 @@
+#lang racket
+;; Isaac Powell
+;; Written for Geoffrey Matthews' CSCI 322 class
+;; A simple server that synchronous two seperate
+;; kinds of processes.
+
+;; thread A object
+(define (processA in-channel out-channel)
+  
+  )
+
+;; thread B object
+(define (processB in-channel out-channel)
+  
+  )
+
+;; server used to synchronize
+(define (server in-channel out-channel)
+  (thread (lambda ()
+            
+            )))

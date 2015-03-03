@@ -1,0 +1,82 @@
+#lang racket
+(require racket/async-channel)
+
+(define (test ic oc)
+  (thread (lambda ()
+            (define (get)
+              (async-channel-get ic))
+            (define (put s)
+              (async-channel-put oc s))
+            (let loop ([data (get)])
+              (case data
+                [(Q) (put 'q) (void)]
+                [(A) (begin
+                       (put 'a)
+                       (loop (get)))]
+                [(B) (begin
+                       (put 'b)
+                       (loop (get)))]
+                [else (printf "Never should be here.\n")
+                      (loop (get))])))))
+
+(define ts (make-async-channel))
+(define fs (make-async-channel))
+
+(define (pA ic oc)
+  (thread (lambda ()
+            (define (get)
+              (async-channel-get ic))
+            (define (put s)
+              (async-channel-put oc s))
+            (define data "")
+            (define cnt 0)
+            (let loop ()
+              (sleep 4)
+              ;;(put 'A)
+              ;;(printf "A trying to put signal\n")
+              (set! data (get))
+              (put 'A)
+              (case data
+                [(q) (void)]
+                [(a) (begin
+                       (set! cnt (+ 1 cnt))
+                       (printf "Process A proceeds ~a time.\n" cnt)
+                       (loop))]
+                ;; put back whats not for you
+                [else (put 'B)
+                 (loop)])
+              
+              ))))
+
+(define (pB ic oc)
+  (thread (lambda ()
+            (define (get)
+              (async-channel-get ic))
+            (define (put s)
+              (async-channel-put oc s))
+            (define data "")
+            (define cnt 0)
+            (let loop ()
+              (set! data (get))
+              (sleep 2)
+              ;;(put 'B)
+              ;;(printf "B trying to put signal\n")
+              (put 'B)
+              (case data
+                [(q) (void)]
+                [(b) (begin
+                       (set! cnt (+ 1 cnt))
+                       (printf "Process B proceeds ~a time.\n" cnt)
+                       (loop))]
+                ;; put back whats not for you
+                [else (put 'A)
+                 (loop)])
+              
+              ))))
+
+(test ts fs)
+(pA fs ts)
+(pB fs ts)
+
+;; start things off
+(async-channel-put ts 'A)
