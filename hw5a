@@ -4,6 +4,15 @@
 ;; A simple server that synchronous two seperate
 ;; kinds of processes.
 
+;; synchronizing server class
+(define server%
+  (class object%
+    ;;
+    (init ocIn)
+    (define oc ocIn)
+    (super-new)
+    ))
+
 ;; thread A object
 (define (processA in-channel out-channel)
   
@@ -14,8 +23,4 @@
   
   )
 
-;; server used to synchronize
-(define (server in-channel out-channel)
-  (thread (lambda ()
-            
-            )))
+

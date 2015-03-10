@@ -1,82 +1,119 @@
 #lang racket
 (require racket/async-channel)
 
-(define (test ic oc)
+(define (test iAc iBc oAc oBc)
   (thread (lambda ()
-            (define (get)
-              (async-channel-get ic))
-            (define (put s)
-              (async-channel-put oc s))
-            (let loop ([data (get)])
+            ;; states of A and B arrivals
+            (define bcnt 0)
+            (define acnt 0)
+            (define data "")
+            (define (getA)
+              (async-channel-try-get iAc))
+            (define (getB)
+              (async-channel-try-get iBc))
+            (define (putA s)
+              (async-channel-put oAc s))
+            (define (putB s)
+              (async-channel-put oBc s))
+            (let loop ()
+              ;; process for As
+              (set! data (getA))
+              (cond
+                [(async-channel? data)(putA 'a)(putB 'b)])
               (case data
-                [(Q) (put 'q) (void)]
-                [(A) (begin
-                       (put 'a)
-                       (loop (get)))]
+                [(Q) (putA 'q) (void)]
+                [(A) 
+                 (begin
+                   (putA 'a))
+                 ;;(set! acnt (add1 acnt))
+                     ])
+              (cond
+                [(>= bcnt 0)])
+              ;; process for Bs
+              (set! data (getB))
+              (case data
+                [(Q) (putB 'q) (void)]
                 [(B) (begin
-                       (put 'b)
-                       (loop (get)))]
-                [else (printf "Never should be here.\n")
-                      (loop (get))])))))
+                       (putB 'b)
+                       (loop))]
+                [else (loop)])))))
 
-(define ts (make-async-channel))
-(define fs (make-async-channel))
+;; channels to A
+(define tsA (make-async-channel))
+(define fsA (make-async-channel))
+;; channels to B
+(define tsB (make-async-channel))
+(define fsB (make-async-channel))
 
-(define (pA ic oc)
+
+(define processA%
+  (class object%
+  (init ocIn)
+  (define oc ocIn)
   (thread (lambda ()
+            
+            (define ic (make-async-channel))
+            ;; TODO return their output channel
+            (define get-chan oc)
             (define (get)
               (async-channel-get ic))
             (define (put s)
               (async-channel-put oc s))
+            ;; send our input channel to server
+            (put ic)
             (define data "")
             (define cnt 0)
             (let loop ()
-              (sleep 4)
-              ;;(put 'A)
-              ;;(printf "A trying to put signal\n")
+              (sleep 3)
               (set! data (get))
               (put 'A)
               (case data
-                [(q) (void)]
+                [(q) (printf "Process A stopping.")]
                 [(a) (begin
-                       (set! cnt (+ 1 cnt))
+                       (set! cnt (add1 cnt))
                        (printf "Process A proceeds ~a time.\n" cnt)
-                       (loop))]
-                ;; put back whats not for you
-                [else (put 'B)
-                 (loop)])
-              
-              ))))
+                       (loop))]))))
+    (super-new)))
 
-(define (pB ic oc)
+
+(define processB%
+  (class object%
+  (init ocIn)
+  (define oc ocIn)
   (thread (lambda ()
+            
+            (define ic (make-async-channel))
             (define (get)
               (async-channel-get ic))
             (define (put s)
               (async-channel-put oc s))
+            ;; send our unique channel to server
+            (put ic)
             (define data "")
             (define cnt 0)
             (let loop ()
+              (sleep 1)
               (set! data (get))
-              (sleep 2)
-              ;;(put 'B)
-              ;;(printf "B trying to put signal\n")
               (put 'B)
               (case data
-                [(q) (void)]
+                [(q) (printf "Process B stopping.")]
                 [(b) (begin
-                       (set! cnt (+ 1 cnt))
+                       (set! cnt (add1 cnt))
                        (printf "Process B proceeds ~a time.\n" cnt)
-                       (loop))]
-                ;; put back whats not for you
-                [else (put 'A)
-                 (loop)])
-              
-              ))))
+                       (loop))]))))
+    (super-new)))
 
-(test ts fs)
-(pA fs ts)
-(pB fs ts)
 
+(test tsA tsB fsA fsB)
+(define pA (new processA% [ocIn tsA]))
+;;(pA fsA)
+(define pB (new processB% [ocIn tsB]))
+(define pB2 (new processB% [ocIn tsB]))
+;;(pB fsB)
 ;; start things off
-(async-channel-put ts 'A)
+(async-channel-put tsA 'A)
+(async-channel-put tsB 'B)
+
+(define (stop)
+  (async-channel-put tsA 'Q)
+  (async-channel-put tsB 'Q))
