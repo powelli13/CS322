@@ -1,4 +1,5 @@
 #lang racket
+(require racket/async-channel)
 ;; Isaac Powell
 ;; Written for Geoffrey Matthews' CSCI 322 class
 ;; A simple server that synchronous two seperate
@@ -7,20 +8,122 @@
 ;; synchronizing server class
 (define server%
   (class object%
-    ;;
-    (init ocIn)
-    (define oc ocIn)
+    ;; channels to and from As and Bs
+    ;; to server from A, from server to B, etc.
+    ;; server will get from in* and put to out*
+    (init tSfA tSfB fStA fStB)
+    (define inA tSfA)
+    (define inB tSfB)
+    (define outA fStA)
+    (define outB fStB)
+    (define (getA)
+      (async-channel-try-get inA))
+    (define (getB)
+      (async-channel-try-get inB))
+    (define (putA s)
+      (async-channel-put outA s))
+    (define (putB s)
+      (async-channel-put outB s))
+    
+    
+    ;; keep track of waiting As
+    ;; and unserviced Bs, data for gets
+    (define cntA 0)
+    (define unsB 0)
+    (define data "")
     (super-new)
+    (define/public (start)
+      (thread (lambda ()
+                (let loop ()
+                  ;; reset data
+                  (set! data "")
+                  (set! data (getA))
+                  (case data
+                    [("Ahere")(set! cntA (add1 cntA))]
+                    [("Adone")(set! cntA (sub1 cntA))])
+                  (set! data "") ;; necessary? TODO
+                  (set! data (getB))
+                  (case data
+                    [("Bhere")(putA "hasB")(set! unsB (add1 unsB))])
+                  (cond [(and (> cntA 0)(> unsB 0))
+                      (putB "hasA")(set! unsB (sub1 unsB))])
+                  (loop)))))
     ))
 
 ;; thread A object
-(define (processA in-channel out-channel)
-  
-  )
+(define processA%
+  (class object%
+    (init inC outC)
+    (define in inC)
+    (define out outC)
+    (define data "")
+    (define cntB 0)
+    (define (get)
+      (async-channel-get in))
+    (define (put s)
+      (async-channel-put out s))
+    (super-new)
+    ;; procedure must be called to start
+    ;; main execution loop
+    (define/public (start)
+      (thread (lambda ()
+                (let loopOut ()
+                  (sleep (random 7))
+                  (put "Ahere")
+                  (let loopIn ()
+                    (set! data "")
+                    (set! data (get))
+                    (case data
+                      [("hasB")(set! cntB (add1 cntB))])
+                    (cond [(>= cntB 2)(set! cntB 0)]
+                          [else (loopIn)]))
+                  (put "Adone")
+                  (printf "Aproceeds.\n")
+                  (loopOut))
+                )))
+    ))
 
 ;; thread B object
-(define (processB in-channel out-channel)
-  
-  )
+(define processB%
+  (class object%
+    (init inC outC)
+        (define in inC)
+    (define out outC)
+    (define data "")
+    (define (get)
+      (async-channel-get in))
+    (define (put s)
+      (async-channel-put out s))
+    (super-new)
+    (define/public (start)
+      (thread (lambda ()
+                (let loopOut ()
+                  (sleep (random 4))
+                  (put "Bhere")
+                  (let loopIn ()
+                    (set! data "")
+                    (set! data (get))
+                    (case data
+                      [("hasA")(printf "B proceeds.\n")]
+                      [else (loopIn)]))
+                  (loopOut))))
+    )))
 
+;; channels to/from As
+(define tsA (make-async-channel))
+(define fsA (make-async-channel))
+;; channels to/from Bs
+(define tsB (make-async-channel))
+(define fsB (make-async-channel))
+
+;; start server thread running
+(define our_server (new server% [tSfA tsA][tSfB tsB][fStA fsA][fStB fsB]))
+(send our_server start)
+
+(define a1 (new processA% [inC fsA][outC tsA]))
+(define b1 (new processB% [inC fsB][outC tsB]))
+(define b2 (new processB% [inC fsB][outC tsB]))
+(send a1 start)
+(send b1 start)
+(send b2 start)
 
