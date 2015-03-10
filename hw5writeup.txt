@@ -1,0 +1,72 @@
+Isaac Powell W-00977990
+Geoffrey Matthews CSCI-322
+Homework 5 Write Up
+Due: March 11th 2015
+
+Part A Solution:
+    For part A of the assignment coordination was achieved via four asynchronous channels. Two channels
+    for type A processes, one for receiving from server and one for sending to server. Similarly type B
+    processes had two channels, one input and one output. The server records whether or not there is a
+    type A process "waiting", meaning the given A process needs to see more B processes enter the room.
+    Also the server records the arrival of any "unserviced" Bs. A type B process is unserviced if it has
+    not met an A process in the room. The significant events that the different threads need to communicate
+    to each other through the server are their arrivals. However a type A process also must communicate
+    when it leaves so that the server can update it internal state to reflect that there are no As in the
+    room. Both types of processes are in a loop where they sleep then signal and then wait for the server
+    to send them the appropriate message that means they have encountered what they need to and then proceed.
+    The pseudo-code for the Server and both types of processes is below:
+    Server:
+        // the number of A processes waiting in the room
+        cntA = 0
+        // the number of unserviced Bs
+        unsB = 0
+        loop
+            data = get-try fromA
+            case data:
+                // an A either arrives or leaves
+                // the count is modified accordingly
+                "Ahere" => cntA++
+                "Adone" => cntA--
+            data = get-try fromB
+            case data:
+                // notify any waiting A that a B has arrived
+                "Bhere" => send toA "hasB"
+                unsB++
+            if cntA > 0 and unsB > 0:
+                send toB "hasA"
+                unsB--
+        end loop
+        
+    Type A:
+        loop
+            sleep for random time
+            send to Server "Ahere"
+            loop
+                wait to get "hasB" from Server
+                Bcnt++
+                if cntB >= 2
+                    break
+            end loop
+            cntB = 0
+            send to server "Adone"
+        end loop
+        
+    Type B:
+        loop
+            sleep for random time
+            send to Server "Bhere"
+            wait to get "hasA" from Server
+        end loop
+        
+    Note that in an A process it signals its arrival and departure. Because each time through A's 
+    main loop it sends both, with "Ahere" first, this guarantees that the value of cntA in the
+    Server will never be negative. Also notice that everytime a B arrives the server counts that 
+    B as "unserviced" and then checks everytime through the Server main loop if there are any present
+    A types and any unserviced Bs which causes it to send "hasA" on the channel to B types. Each
+    time this message is sent it effectively releases a B and decrements unserviced Bs. This way 
+    B types will only get signaled when an A is present. Finally A has waiting which is dependent on
+    the number of messages it has received signifying a Bs arrival, so no A will proceed til it picks
+    up two messages for B arrivals.
+    
+Part B Solution:
+    

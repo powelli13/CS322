@@ -25,7 +25,6 @@
     (define (putB s)
       (async-channel-put outB s))
     
-    
     ;; keep track of waiting As
     ;; and unserviced Bs, data for gets
     (define cntA 0)
@@ -47,8 +46,7 @@
                     [("Bhere")(putA "hasB")(set! unsB (add1 unsB))])
                   (cond [(and (> cntA 0)(> unsB 0))
                       (putB "hasA")(set! unsB (sub1 unsB))])
-                  (loop)))))
-    ))
+                  (loop)))))))
 
 ;; thread A object
 (define processA%
@@ -67,8 +65,9 @@
     ;; main execution loop
     (define/public (start)
       (thread (lambda ()
-                (let loopOut ()
+                (let loopOut ([t 3])
                   (sleep (random 7))
+                  (printf "A arrives ~a.\n" t)
                   (put "Ahere")
                   (let loopIn ()
                     (set! data "")
@@ -78,10 +77,9 @@
                     (cond [(>= cntB 2)(set! cntB 0)]
                           [else (loopIn)]))
                   (put "Adone")
-                  (printf "Aproceeds.\n")
-                  (loopOut))
-                )))
-    ))
+                  (printf "A proceeds ~a.\n" t)
+                  (cond [(> t 0)(loopOut (sub1 t))]))
+                (printf "A finished.\n"))))))
 
 ;; thread B object
 (define processB%
@@ -97,17 +95,18 @@
     (super-new)
     (define/public (start)
       (thread (lambda ()
-                (let loopOut ()
+                (let loopOut ([t 3])
                   (sleep (random 4))
+                  (printf "B arrives ~a.\n" t)
                   (put "Bhere")
                   (let loopIn ()
                     (set! data "")
                     (set! data (get))
                     (case data
-                      [("hasA")(printf "B proceeds.\n")]
+                      [("hasA")(printf "B proceeds ~a.\n" t)]
                       [else (loopIn)]))
-                  (loopOut))))
-    )))
+                  (cond [(> t 0)(loopOut (sub1 t))]))
+                (printf "B finished.\n"))))))
 
 ;; channels to/from As
 (define tsA (make-async-channel))
@@ -126,4 +125,3 @@
 (send a1 start)
 (send b1 start)
 (send b2 start)
-
