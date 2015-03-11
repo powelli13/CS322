@@ -11,9 +11,11 @@ Part A Solution:
     Also the server records the arrival of any "unserviced" Bs. A type B process is unserviced if it has
     not met an A process in the room. The significant events that the different threads need to communicate
     to each other through the server are their arrivals. However a type A process also must communicate
-    when it leaves so that the server can update it internal state to reflect that there are no As in the
-    room. Both types of processes are in a loop where they sleep then signal and then wait for the server
-    to send them the appropriate message that means they have encountered what they need to and then proceed.
+    when it leaves so that the server can update its internal state to reflect that there are no As in the
+    room. Type B processes basically come and go as soon as they please should an A process be there. Both 
+    types of processes are in a loop where they sleep then signal their arrival to the Server and then wait
+    for the server to send them the appropriate message that means they have encountered what they need to
+    and then proceed.
     The pseudo-code for the Server and both types of processes is below:
     Server:
         // the number of A processes waiting in the room
@@ -45,9 +47,9 @@ Part A Solution:
                 wait to get "hasB" from Server
                 Bcnt++
                 if cntB >= 2
+                    cntB = 0
                     break
             end loop
-            cntB = 0
             send to server "Adone"
         end loop
         
@@ -67,6 +69,74 @@ Part A Solution:
     B types will only get signaled when an A is present. Finally A has waiting which is dependent on
     the number of messages it has received signifying a Bs arrival, so no A will proceed til it picks
     up two messages for B arrivals.
+    Part A runs with seven A processes and fourteen B processes. Each process runs through its loop
+    ten times.
     
 Part B Solution:
-    
+    The major change that was needed to satisfy the requirement of part B was on the release 
+    conditions for a type B process. In the solution to part A a type A process would block until
+    it saw two Bs, at which point it would notify the server it was leaving and then proceed.
+    However now with the Bs waiting for the second B to arrive, their condition of release is 
+    essentially the same as that of A. Thus all three waiting processes, the A and two Bs, will
+    release at the same time. In order to accomplish this the A process now simply waits for
+    two B processes to arrive, then it sends a signal to the server which causes it to release
+    the two Bs. The B process waits for the server to send a message to it indicating that another
+    B and an A are ready for release.
+    The solution is guaranteed to cause the Bs that any given A meets to wait because of the following:
+        The conditions that must be present when a type A process tells the server to release the Bs
+    that it met upon meeting the second B are as such:
+        1) an A is waiting to see two Bs
+        2) one B was previously waiting
+    The first condition is trivially true because whatever A is telling the server to release the Bs
+    only does so from the waiting section of its code (as seen below) so there is guaranteed to be an
+    A waiting. The second condition is found to be true when the interactions of a waiting B and the 
+    Server are examined. Suppose the B arrives before the A, it will wait and the server will notify 
+    any incoming A of it being in the room via relaying the B's arrival message. When the second B 
+    arrives then the Server will send the message to both that it is clear to proceed, both these Bs 
+    will block on the asynchronous get until they receive this message and proceed along with the A.
+    If the B arrives after the A then it will send the message which will cause A to increment its 
+    counter. Once the second B arrives A will increment its internal counter again, proceed and tell
+    the Server to release the Bs that it met with.
+    Below is the pseudo code for the solution to part B:
+    Server:
+        loop
+            data = get-try fromA
+            case data:
+                // this means a type A is done waiting
+                // so the Bs are released
+                "relB" => send toB "metAandB" twice // sends twice, once for each waiting B
+            data = get-try fromB
+            case data:
+                // notify any waiting A that a B has arrived
+                "Bhere" => send toA "hasB"
+        end loop
+        
+    Type A:
+        loop
+            sleep for random time
+            loop
+                wait to get "hasB" from Server
+                Bcnt++
+                if cntB >= 2
+                // notify the server that the A has met two Bs
+                // is proceeding and the Bs should be released
+                    send to Server "relB"
+                    cntB = 0
+                    break
+            end loop
+            
+        end loop
+        
+    Type B:
+        loop
+            sleep for random time
+            send to Server "Bhere"
+            wait to get "metAandB" from Server
+        end loop
+        
+    Interestingly enough the Server side code is simplier. Becuase it forces the waiting of Bs 
+    for As it renders the internal state variables unnecessary. It simply waits for an A to be
+    satisfied at which point it releases the two Bs that met said A.
+    The solution for Part B uses two As and four Bs. They each sleep three times before finishing.
+    The A and B processes also print out their arrival which when coupled with the lower number
+    of threads and processing loops makes for easy observation of correct program behaviour.

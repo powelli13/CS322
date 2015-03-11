@@ -4,7 +4,7 @@
 ;; Written for Geoffrey Matthews' CSCI 322 class
 ;; A simple server that synchronous two seperate
 ;; kinds of processes.
-;; This is part A.
+;; This is part B.
 
 ;; synchronizing server class
 (define server%
@@ -28,8 +28,8 @@
     
     ;; keep track of waiting As
     ;; and unserviced Bs, data for gets
-    (define cntA 0)
-    (define unsB 0)
+    ;(define cntA 0)
+    ;(define unsB 0)
     (define data "")
     (super-new)
     (define/public (start)
@@ -39,14 +39,11 @@
                   (set! data "")
                   (set! data (getA))
                   (case data
-                    [("Ahere")(set! cntA (add1 cntA))]
-                    [("Adone")(set! cntA (sub1 cntA))])
+                    [("relB")(putB "metAandB")(putB "metAandB")])
                   (set! data "")
                   (set! data (getB))
                   (case data
-                    [("Bhere")(putA "hasB")(set! unsB (add1 unsB))])
-                  (cond [(and (> cntA 0)(> unsB 0))
-                      (putB "hasA")(set! unsB (sub1 unsB))])
+                    [("Bhere")(putA "hasB")])
                   (loop)))))))
 
 ;; thread A object
@@ -67,17 +64,16 @@
     ;; main execution loop
     (define/public (start)
       (thread (lambda ()
-                (let loopOut ([t 10])
+                (let loopOut ([t 3])
                   (sleep (random 7))
-                  (put "Ahere")
+                  (printf "A~a arrives.\n" id)
                   (let loopIn ()
                     (set! data "")
                     (set! data (get))
                     (case data
                       [("hasB")(set! cntB (add1 cntB))])
-                    (cond [(>= cntB 2)(set! cntB 0)]
+                    (cond [(>= cntB 2)(set! cntB 0)(put "relB")]
                           [else (loopIn)]))
-                  (put "Adone")
                   (printf "A~a proceeds.\n" id)
                   (cond [(> t 0)(loopOut (sub1 t))]))
                 (printf "A~a finished.\n" id))))))
@@ -97,14 +93,15 @@
     (super-new)
     (define/public (start)
       (thread (lambda ()
-                (let loopOut ([t 10])
+                (let loopOut ([t 3])
                   (sleep (random 5))
+                  (printf "B~a arrives.\n" id)
                   (put "Bhere")
                   (let loopIn ()
                     (set! data "")
                     (set! data (get))
                     (case data
-                      [("hasA")(printf "B~a proceeds.\n" id)]
+                      [("metAandB")(printf "B~a proceeds.\n" id)]
                       [else (loopIn)]))
                   (cond [(> t 0)(loopOut (sub1 t))]))
                 (printf "B~a finished.\n" id))))))
@@ -145,23 +142,23 @@
 
 (send a1 start)
 (send a2 start)
-(send a3 start)
-(send a4 start)
-(send a5 start)
-(send a6 start)
-(send a7 start)
+;(send a3 start)
+;(send a4 start)
+;(send a5 start)
+;(send a6 start)
+;(send a7 start)
 
 (send b1 start)
 (send b2 start)
 (send b3 start)
 (send b4 start)
-(send b5 start)
-(send b6 start)
-(send b7 start)
-(send b8 start)
-(send b9 start)
-(send b10 start)
-(send b11 start)
-(send b12 start)
-(send b13 start)
-(send b14 start)
+;(send b5 start)
+;(send b6 start)
+;(send b7 start)
+;(send b8 start)
+;(send b9 start)
+;(send b10 start)
+;(send b11 start)
+;(send b12 start)
+;(send b13 start)
+;(send b14 start)
